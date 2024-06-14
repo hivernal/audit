@@ -9,6 +9,15 @@
 #include <set>
 #include <stdexcept>
 
+namespace imgui_glfw_vulkan {
+
+void FramebufferSizeCallback(GLFWwindow* window, [[maybe_unused]] int width,
+                             [[maybe_unused]] int height) {
+  auto swap_chain_rebuild{
+      reinterpret_cast<int*>(glfwGetWindowUserPointer(window))};
+  *swap_chain_rebuild = true;
+}
+
 VkResult CreateDebugUtilsMessengerExt(
     VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* create_info,
     const VkAllocationCallbacks* allocator,
@@ -32,11 +41,12 @@ void DestroyDebugUtilsMessengerExt(VkInstance instance,
   }
 }
 
-ImGuiGlfwVulkan::ImGuiGlfwVulkan(std::string_view name, int width, int height)
+ImGuiGlfwVulkan::ImGuiGlfwVulkan(std::string_view name, int width, int height,
+                                 ImGuiConfigFlags flags)
     : window_width_{width}, window_height_{height}, window_data_{} {
   InitWindow(name.data());
   InitVulkan(name.data());
-  InitImGui();
+  InitImGui(flags);
 }
 
 void ImGuiGlfwVulkan::InitWindow(const char* name) {
@@ -49,6 +59,9 @@ void ImGuiGlfwVulkan::InitWindow(const char* name) {
   if (!window_) {
     throw std::runtime_error("failed to create window!");
   }
+  glfwSetWindowUserPointer(window_,
+                           reinterpret_cast<void*>(&swap_chain_rebuild_));
+  glfwSetFramebufferSizeCallback(window_, FramebufferSizeCallback);
 }
 
 ImGuiGlfwVulkan::~ImGuiGlfwVulkan() {
@@ -358,12 +371,18 @@ VkResult ImGuiGlfwVulkan::CreateDescriptorPool() {
                                 &descriptor_pool_);
 }
 
-void ImGuiGlfwVulkan::InitImGui() {
+void ImGuiGlfwVulkan::InitImGui(ImGuiConfigFlags flags) {
   SetupImGuiWindow();
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   io_ = &ImGui::GetIO();
-  ImGui::StyleColorsDark();
+  io_->ConfigFlags = flags;
+  ImGuiStyle& style = ImGui::GetStyle();
+  if (io_->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    style.WindowRounding = 0.0f;
+    style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+  }
+
   ImGui_ImplGlfw_InitForVulkan(window_, true);
   ImGui_ImplVulkan_InitInfo init_info{};
   init_info.Instance = instance_;
@@ -411,12 +430,8 @@ void ImGuiGlfwVulkan::SetupImGuiWindow() {
 void ImGuiGlfwVulkan::Run() {
   while (!glfwWindowShouldClose(window_)) {
     glfwPollEvents();
-    int width{window_width_}, height{window_height_};
-    glfwGetFramebufferSize(window_, &window_width_, &window_height_);
-    if (width != window_width_ || height != window_height_) {
-      swap_chain_rebuild_ = true;
-    }
     if (swap_chain_rebuild_) {
+      glfwGetFramebufferSize(window_, &window_width_, &window_height_);
       if (window_width_ > 0 && window_height_ > 0) {
         ImGui_ImplVulkan_SetMinImageCount(min_image_count_);
         ImGui_ImplVulkanH_CreateOrResizeWindow(
@@ -435,10 +450,12 @@ void ImGuiGlfwVulkan::Run() {
     ImDrawData* draw_data = ImGui::GetDrawData();
     const bool is_minimized(draw_data->DisplaySize.x <= 0.0f ||
                             draw_data->DisplaySize.y <= 0.0f);
-    if (!is_minimized) {
-      FrameRender(draw_data);
-      FramePresent();
+    if (!is_minimized) FrameRender(draw_data);
+    if (io_->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+      ImGui::UpdatePlatformWindows();
+      ImGui::RenderPlatformWindowsDefault();
     }
+    if (!is_minimized) FramePresent();
   }
 }
 
@@ -534,3 +551,5 @@ void ImGuiGlfwVulkan::FramePresent() {
   window_data_.SemaphoreIndex =
       (window_data_.SemaphoreIndex + 1) % window_data_.SemaphoreCount;
 }
+
+}  // namespace imgui_glfw_vulkan

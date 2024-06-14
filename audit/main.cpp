@@ -1,9 +1,9 @@
 #include <iostream>
 
-#include "audit_gui/mainwindow.h"
+#include "audit/mainwindow.h"
 
 int main() try {
-  MainWindow app{};
+  audit::MainWindow app{};
   app.Run();
   return 0;
 } catch (const std::exception& e) {

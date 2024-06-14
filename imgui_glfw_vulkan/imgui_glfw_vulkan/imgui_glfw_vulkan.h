@@ -14,16 +14,22 @@
 #define GLFW_INCLUDE_VULKAN
 #include "glfw/include/GLFW/glfw3.h"
 
+namespace imgui_glfw_vulkan {
+
 class ImGuiGlfwVulkan {
  public:
   ImGuiGlfwVulkan(std::string_view name = "Window", int width = 800,
-                  int height = 600);
+                  int height = 600,
+                  ImGuiConfigFlags flags = ImGuiConfigFlags_None);
   ImGuiGlfwVulkan(const ImGuiGlfwVulkan&) = default;
   ImGuiGlfwVulkan& operator=(const ImGuiGlfwVulkan&) = default;
   ImGuiGlfwVulkan(ImGuiGlfwVulkan&&) = default;
   ImGuiGlfwVulkan& operator=(ImGuiGlfwVulkan&&) = default;
   virtual ~ImGuiGlfwVulkan();
   void Run();
+
+ protected:
+  ImGuiIO* io_{nullptr};
 
  private:
   struct QueueFamilyIndices {
@@ -59,7 +65,7 @@ class ImGuiGlfwVulkan {
       const VkPhysicalDevice& device);
   void CreateLogicalDevice();
   VkResult CreateDescriptorPool();
-  void InitImGui();
+  void InitImGui(ImGuiConfigFlags flags);
   void SetupImGuiWindow();
   virtual void Render() = 0;
   void FrameRender(ImDrawData* draw_data);
@@ -96,7 +102,8 @@ class ImGuiGlfwVulkan {
   ImGui_ImplVulkanH_Window window_data_{};
   std::uint32_t min_image_count_{2};
   bool swap_chain_rebuild_{false};
-  ImGuiIO* io_{nullptr};
 };
+
+}  // namespace imgui_glfw_vulkan
 
 #endif  // IMGUI_GLFW_VULKAN_IMGUI_GLFW_VULKAN_H_

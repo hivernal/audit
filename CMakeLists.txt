@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(audit_gui CXX)
+project(audit CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Debug)
@@ -11,15 +11,15 @@ set(INCLUDE
 )
 
 set(SRC
-  audit_gui/main.cpp
-  audit_gui/mainwindow.cpp
+  audit/main.cpp
+  audit/mainwindow.cpp
   )
 
 add_subdirectory(imgui_glfw_vulkan)
-add_executable(audit_gui ${SRC})
-target_link_libraries(audit_gui PRIVATE imgui_glfw_vulkan)
-target_include_directories(audit_gui PRIVATE ${INCLUDE})
-target_compile_options(audit_gui
+add_executable(audit ${SRC})
+target_link_libraries(audit PRIVATE imgui_glfw_vulkan)
+target_include_directories(audit PRIVATE ${INCLUDE})
+target_compile_options(audit
   PRIVATE
     -Wall
     -Wextra
